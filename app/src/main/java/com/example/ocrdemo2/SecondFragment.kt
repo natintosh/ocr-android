@@ -69,7 +69,7 @@ class SecondFragment : Fragment() {
     }
 
     @androidx.camera.core.ExperimentalGetImage
-    override fun  onViewCreated(view: View, savedInstanceState: Bundle?) {
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
         cameraProviderFuture.addListener({
@@ -112,39 +112,30 @@ class SecondFragment : Fragment() {
 
 
         val textRecognition = TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS)
-//
-//        val mlkit = MlKitAnalyzer(
-//            listOf(textRecognition),
-//            COORDINATE_SYSTEM_VIEW_REFERENCED,
-//            ContextCompat.getMainExecutor(requireContext())
-//        ) {
-//
-//            Log.d("QRCodeAnalyzer", "Barcode scanned: ${it.getValue(textRecognition)}")
-//            Toast.makeText(
-//                requireContext(),
-//                "Tag Added: ${it.getValue(textRecognition)}",
-//                Toast.LENGTH_SHORT
-//            ).show()
-//
-//        }
-//
+
         val imageAnalyzer = ImageAnalysis.Builder().build().also { imageAnalysis ->
             imageAnalysis.setAnalyzer(executor) {
-                val image = it.image
-                if (image != null) {
-                    val inputImage = InputImage.fromMediaImage(image, rotation)
-                    val task = textRecognition.process(inputImage).addOnSuccessListener { text ->
+                val imageData = it.image
 
+                Log.d("ImageAnalyzer", "Image Data $imageData")
 
+                if (imageData != null)
+                    textRecognition.process(
+                        InputImage.fromMediaImage(
+                            imageData,
+                            it.imageInfo.rotationDegrees
+                        )
+                    ).addOnSuccessListener { text ->
                         Log.d("TextRecognition", "Text scanned: ${text.textBlocks}")
                         Toast.makeText(
                             requireContext(),
                             "Tag Added: ${text.text}",
                             Toast.LENGTH_SHORT
                         ).show()
-                        image.close()
+                        imageData.close()
+                    }.addOnFailureListener {
+                        imageData.close()
                     }
-                }
             }
         }
 
@@ -152,7 +143,7 @@ class SecondFragment : Fragment() {
         val useCaseGroup = UseCaseGroup.Builder()
             .addUseCase(preview)
             .addUseCase(imageAnalyzer)
-            .setViewPort(viewport)
+            .setViewPort(binding.cameraPreviewView.viewPort!!)
             .build()
 
         var camera =
