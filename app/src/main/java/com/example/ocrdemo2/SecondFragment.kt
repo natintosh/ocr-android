@@ -2,9 +2,7 @@ package com.example.ocrdemo2
 
 import android.os.Bundle
 import android.util.Log
-import android.util.Rational
 import android.view.*
-import android.widget.Toast
 import androidx.camera.core.*
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.core.content.ContextCompat
@@ -21,6 +19,8 @@ import java.util.concurrent.Executors
 /**
  * A simple [Fragment] subclass as the second destination in the navigation.
  */
+
+@androidx.camera.core.ExperimentalGetImage
 class SecondFragment : Fragment() {
 
     private var _binding: FragmentSecondBinding? = null
@@ -57,13 +57,9 @@ class SecondFragment : Fragment() {
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View {
-
-        cameraProviderFuture = ProcessCameraProvider.getInstance(requireContext())
-
         _binding = FragmentSecondBinding.inflate(inflater, container, false)
 
-
-
+        cameraProviderFuture = ProcessCameraProvider.getInstance(requireContext())
 
         return binding.root
     }
@@ -93,48 +89,40 @@ class SecondFragment : Fragment() {
         _binding = null
     }
 
-    @androidx.camera.core.ExperimentalGetImage
     private fun bindPreview(cameraProvider: ProcessCameraProvider) {
-        val preview = Preview.Builder().build()
+        cameraProvider.unbindAll()
+
+        val preview = Preview.Builder().build().apply {
+            setSurfaceProvider(binding.cameraPreviewView.surfaceProvider)
+        }
 
         val cameraSelector: CameraSelector =
             CameraSelector.Builder()
                 .requireLensFacing(CameraSelector.LENS_FACING_BACK).build()
 
-        preview.setSurfaceProvider(binding.cameraPreviewView.surfaceProvider)
+
+        val recognizer = TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS)
 
 
-        val cardFrameWidth = binding.cameraCardFrameView.measuredWidth
-        val cardFrameHeight = binding.cameraCardFrameView.measuredHeight;
+        val imageAnalyzer = ImageAnalysis.Builder().build()
 
-        val viewport = ViewPort.Builder(Rational(cardFrameWidth, cardFrameHeight), rotation)
-            .build()
+        imageAnalyzer.setAnalyzer(executor) { imageProxy ->
 
+            val mediaImage = imageProxy.image
 
-        val textRecognition = TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS)
+            if (mediaImage != null) {
+                val image =
+                    InputImage.fromMediaImage(mediaImage, imageProxy.imageInfo.rotationDegrees)
 
-        val imageAnalyzer = ImageAnalysis.Builder().build().also { imageAnalysis ->
-            imageAnalysis.setAnalyzer(executor) {
-                val imageData = it.image
-
-                Log.d("ImageAnalyzer", "Image Data $imageData")
-
-                if (imageData != null)
-                    textRecognition.process(
-                        InputImage.fromMediaImage(
-                            imageData,
-                            it.imageInfo.rotationDegrees
-                        )
-                    ).addOnSuccessListener { text ->
-                        Log.d("TextRecognition", "Text scanned: ${text.textBlocks}")
-                        Toast.makeText(
-                            requireContext(),
-                            "Tag Added: ${text.text}",
-                            Toast.LENGTH_SHORT
-                        ).show()
-                        imageData.close()
-                    }.addOnFailureListener {
-                        imageData.close()
+                recognizer.process(image)
+                    .addOnSuccessListener { text ->
+                        Log.d(SecondFragment::javaClass.name, "Text Scanned: ${text.text}")
+                    }
+                    .addOnFailureListener { task ->
+                        Log.d(SecondFragment::javaClass.name, "ImageAnalyzer: ${task.message}")
+                    }
+                    .addOnCompleteListener {
+                        imageProxy.close()
                     }
             }
         }
@@ -146,8 +134,16 @@ class SecondFragment : Fragment() {
             .setViewPort(binding.cameraPreviewView.viewPort!!)
             .build()
 
-        var camera =
-            cameraProvider.bindToLifecycle(this as LifecycleOwner, cameraSelector, useCaseGroup)
+        val camera = cameraProvider.bindToLifecycle(
+            this as LifecycleOwner,
+            cameraSelector,
+            useCaseGroup
+        )
 
+        if (camera.cameraInfo.hasFlashUnit()) {
+            binding.cameraFlashButton.setOnClickListener {
+                camera.cameraControl.enableTorch(camera.cameraInfo.torchState.value == TorchState.OFF)
+            }
+        }
     }
 }

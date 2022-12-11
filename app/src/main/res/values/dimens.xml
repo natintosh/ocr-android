@@ -2,4 +2,5 @@
     <dimen name="fab_margin">16dp</dimen>
     <dimen name="card_frame_view_border_width">4dp</dimen>
     <dimen name="card_frame_view_border_round">16dp</dimen>
+    <dimen name="dimen_16dp">16dp</dimen>
 </resources>
