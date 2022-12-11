@@ -17,5 +17,6 @@
     <string name="permission_denied">Permission denied by user do something else</string>
     <string name="deny">DENY</string>
     <string name="allow">ALLOW</string>
-    <string name="flash">Flash</string>
+    <string name="flash_on">Flash On</string>
+    <string name="flash_off">Flash Off</string>
 </resources>

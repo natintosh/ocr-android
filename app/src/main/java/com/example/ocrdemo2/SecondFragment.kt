@@ -1,18 +1,13 @@
 package com.example.ocrdemo2
 
 import android.os.Bundle
-import android.util.Log
 import android.view.*
 import androidx.camera.core.*
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
-import androidx.lifecycle.LifecycleOwner
 import com.example.ocrdemo2.databinding.FragmentSecondBinding
 import com.google.common.util.concurrent.ListenableFuture
-import com.google.mlkit.vision.common.InputImage
-import com.google.mlkit.vision.text.TextRecognition
-import com.google.mlkit.vision.text.latin.TextRecognizerOptions
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 
@@ -101,31 +96,9 @@ class SecondFragment : Fragment() {
                 .requireLensFacing(CameraSelector.LENS_FACING_BACK).build()
 
 
-        val recognizer = TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS)
-
-
         val imageAnalyzer = ImageAnalysis.Builder().build()
 
-        imageAnalyzer.setAnalyzer(executor) { imageProxy ->
-
-            val mediaImage = imageProxy.image
-
-            if (mediaImage != null) {
-                val image =
-                    InputImage.fromMediaImage(mediaImage, imageProxy.imageInfo.rotationDegrees)
-
-                recognizer.process(image)
-                    .addOnSuccessListener { text ->
-                        Log.d(SecondFragment::javaClass.name, "Text Scanned: ${text.text}")
-                    }
-                    .addOnFailureListener { task ->
-                        Log.d(SecondFragment::javaClass.name, "ImageAnalyzer: ${task.message}")
-                    }
-                    .addOnCompleteListener {
-                        imageProxy.close()
-                    }
-            }
-        }
+        imageAnalyzer.setAnalyzer(executor, MonnifyImageAnalyzer())
 
 
         val useCaseGroup = UseCaseGroup.Builder()
@@ -135,15 +108,47 @@ class SecondFragment : Fragment() {
             .build()
 
         val camera = cameraProvider.bindToLifecycle(
-            this as LifecycleOwner,
+            viewLifecycleOwner,
             cameraSelector,
             useCaseGroup
         )
 
+        setupCameraFlash(camera)
+        setupTouchFocus(camera)
+    }
+
+    private fun setupCameraFlash(camera: Camera) {
         if (camera.cameraInfo.hasFlashUnit()) {
+            binding.cameraFlashButton.visibility = View.VISIBLE
             binding.cameraFlashButton.setOnClickListener {
                 camera.cameraControl.enableTorch(camera.cameraInfo.torchState.value == TorchState.OFF)
             }
+            camera.cameraInfo.torchState.observe(viewLifecycleOwner) {
+                binding.cameraFlashButton.text =
+                    getText(if (it == TorchState.ON) R.string.flash_on else R.string.flash_off)
+            }
+        }
+    }
+
+    private fun setupTouchFocus(camera: Camera) {
+
+
+        binding.cameraPreviewView.setOnTouchListener { view, event ->
+            if (event.action == MotionEvent.ACTION_UP) {
+                view.performClick()
+                return@setOnTouchListener false
+            } else if (event.action == MotionEvent.ACTION_DOWN) {
+                val factory = SurfaceOrientedMeteringPointFactory(
+                    view.measuredWidth.toFloat(),
+                    view.measuredHeight.toFloat()
+                )
+                val point = factory.createPoint(event.x, event.y)
+                val action = FocusMeteringAction.Builder(point).build()
+                camera.cameraControl.startFocusAndMetering(action)
+                return@setOnTouchListener true
+            }
+
+            return@setOnTouchListener false
         }
     }
 }

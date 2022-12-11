@@ -13,20 +13,20 @@ class MonnifyImageAnalyzer : ImageAnalysis.Analyzer {
     private val recognizer = TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS)
 
     override fun analyze(imageProxy: ImageProxy) {
-        val mediaImage = imageProxy.image;
+        val mediaImage = imageProxy.image
 
         if (mediaImage != null) {
-            val image = InputImage.fromMediaImage(mediaImage, imageProxy.imageInfo.rotationDegrees)
+            val image =
+                InputImage.fromMediaImage(mediaImage, imageProxy.imageInfo.rotationDegrees)
 
-            val result = recognizer.process(image)
+            recognizer.process(image)
                 .addOnSuccessListener { text ->
-
-                    Log.d("TextRecognition", "Text scanned: ${text.textBlocks}")
-                    Log.d("TextRecognition", "Text scanned: ${text.text}")
-
-                    imageProxy.close()
+                    Log.d(SecondFragment::javaClass.name, "Text Scanned: ${text.text}")
                 }
-                .addOnFailureListener {
+                .addOnFailureListener { task ->
+                    Log.d(SecondFragment::javaClass.name, "ImageAnalyzer: ${task.message}")
+                }
+                .addOnCompleteListener {
                     imageProxy.close()
                 }
         }
