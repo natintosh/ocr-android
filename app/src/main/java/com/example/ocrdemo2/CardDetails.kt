@@ -3,8 +3,8 @@ package com.example.ocrdemo2
 class CardDetails {
 
     companion object {
-        const val CARD_NUMBER_REGEX = "^[\\d?]{12,19}$"
-        const val EXPIRY_DATE_REGEX = "^(?:0[1-9]|1[0-2])/\\d{2}\$"
+        const val CARD_NUMBER_REGEX = "[\\d?]{12,19}"
+        const val EXPIRY_DATE_REGEX = "(?:0[1-9]|1[0-2])/\\d{2}"
     }
 
     var cardNumber: String = ""
