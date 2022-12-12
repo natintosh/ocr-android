@@ -9,7 +9,7 @@ import com.google.mlkit.vision.text.TextRecognition
 import com.google.mlkit.vision.text.latin.TextRecognizerOptions
 
 @ExperimentalGetImage
-class MonnifyImageAnalyzer : ImageAnalysis.Analyzer {
+class ImageAnalyzer : ImageAnalysis.Analyzer {
     private val recognizer = TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS)
 
     override fun analyze(imageProxy: ImageProxy) {
@@ -19,9 +19,11 @@ class MonnifyImageAnalyzer : ImageAnalysis.Analyzer {
             val image =
                 InputImage.fromMediaImage(mediaImage, imageProxy.imageInfo.rotationDegrees)
 
+
+
             recognizer.process(image)
-                .addOnSuccessListener { text ->
-                    Log.d(SecondFragment::javaClass.name, "Text Scanned: ${text.text}")
+                .addOnSuccessListener { visionText ->
+                    Log.d(SecondFragment::javaClass.name, "Text Scanned: ${visionText.text}")
                 }
                 .addOnFailureListener { task ->
                     Log.d(SecondFragment::javaClass.name, "ImageAnalyzer: ${task.message}")

@@ -6,6 +6,7 @@ plugins {
 ext {
     camerax_version = "1.3.0-alpha01"
     fragment_version = "1.5.4"
+    text_recognition_version = "16.0.0-beta6"
 }
 
 android {
@@ -45,7 +46,7 @@ dependencies {
     implementation("androidx.camera:camera-view:${camerax_version}")
     implementation("androidx.camera:camera-lifecycle:${camerax_version}")
 
-    implementation 'com.google.android.gms:play-services-mlkit-text-recognition:18.0.2'
+    implementation("com.google.mlkit:text-recognition:${text_recognition_version}")
 
 
     implementation("androidx.fragment:fragment-ktx:$fragment_version")

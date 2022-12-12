@@ -15,7 +15,7 @@ import java.util.concurrent.Executors
  * A simple [Fragment] subclass as the second destination in the navigation.
  */
 
-@androidx.camera.core.ExperimentalGetImage
+@ExperimentalGetImage
 class SecondFragment : Fragment() {
 
     private var _binding: FragmentSecondBinding? = null
@@ -26,9 +26,9 @@ class SecondFragment : Fragment() {
 
     private lateinit var cameraProviderFuture: ListenableFuture<ProcessCameraProvider>
 
-    private var rotation = Surface.ROTATION_0
-
     private val executor: ExecutorService = Executors.newSingleThreadExecutor()
+
+    private var rotation = Surface.ROTATION_0
 
     private val orientationEventListener by lazy {
         object : OrientationEventListener(requireContext()) {
@@ -48,6 +48,8 @@ class SecondFragment : Fragment() {
         }
     }
 
+    private var flashMode = ImageCapture.FLASH_MODE_OFF
+
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
@@ -59,7 +61,6 @@ class SecondFragment : Fragment() {
         return binding.root
     }
 
-    @androidx.camera.core.ExperimentalGetImage
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
@@ -95,10 +96,11 @@ class SecondFragment : Fragment() {
             CameraSelector.Builder()
                 .requireLensFacing(CameraSelector.LENS_FACING_BACK).build()
 
+        val imageAnalyzer = ImageAnalysis.Builder()
+            .build()
 
-        val imageAnalyzer = ImageAnalysis.Builder().build()
-
-        imageAnalyzer.setAnalyzer(executor, MonnifyImageAnalyzer())
+        imageAnalyzer
+            .setAnalyzer(executor, ImageAnalyzer())
 
 
         val useCaseGroup = UseCaseGroup.Builder()
@@ -110,7 +112,7 @@ class SecondFragment : Fragment() {
         val camera = cameraProvider.bindToLifecycle(
             viewLifecycleOwner,
             cameraSelector,
-            useCaseGroup
+            useCaseGroup,
         )
 
         setupCameraFlash(camera)
@@ -126,6 +128,8 @@ class SecondFragment : Fragment() {
             camera.cameraInfo.torchState.observe(viewLifecycleOwner) {
                 binding.cameraFlashButton.text =
                     getText(if (it == TorchState.ON) R.string.flash_on else R.string.flash_off)
+                flashMode =
+                    if (it == TorchState.ON) ImageCapture.FLASH_MODE_ON else ImageCapture.FLASH_MODE_OFF
             }
         }
     }
@@ -138,12 +142,16 @@ class SecondFragment : Fragment() {
                 view.performClick()
                 return@setOnTouchListener false
             } else if (event.action == MotionEvent.ACTION_DOWN) {
-                val factory = SurfaceOrientedMeteringPointFactory(
-                    view.measuredWidth.toFloat(),
-                    view.measuredHeight.toFloat()
+                val factory = DisplayOrientedMeteringPointFactory(
+                    view.display, camera.cameraInfo,
+                    view.width.toFloat(),
+                    view.height.toFloat()
                 )
                 val point = factory.createPoint(event.x, event.y)
-                val action = FocusMeteringAction.Builder(point).build()
+                val action = FocusMeteringAction.Builder(point, FocusMeteringAction.FLAG_AF)
+                    .apply {
+                        disableAutoCancel()
+                    }.build()
                 camera.cameraControl.startFocusAndMetering(action)
                 return@setOnTouchListener true
             }
